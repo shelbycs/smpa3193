@@ -1,0 +1,26 @@
+import agate
+counties= agate.Table.from_csv("county_population.csv")
+print counties
+popchange1016 = counties.compute([('change', agate.PercentChange('estimate_2010', 'estimate_2015'))
+print popchange1016[0][change]
+from decimal import Decimal
+def round_change(row):
+	return row['change'].quantize(Decimal(0.1))
+rounded_change=popchange1016.compute([('change_rounded', agate.Formula(agate.Number(), round_change))])
+print rounded_change[0]['change_rounded']
+sorted_counties=rounded_change.order_by('change', reverse=True)
+sorted_counties.select(['county', 'state', 'change_rounded'])
+
+import re
+by_northdakota=sorted_counties.where(lamba row: 'North Dakota' in row['state'])
+by_northdakota.select(['county, 'change_rounded']).print_table(max_rows=50)
+
+bottom_fifty=rounded_change.order_by('change', reverse=False)
+bottom_fifty.select(['county', 'state', 'change_rounded']).print_table(max_rows=50)
+
+by_population_2015= counties.order_by('estimate_2015', reverse=True)
+by_population_2015.select(['county', 'estimate_2015']).print_table(max_rows=50)
+
+unique_counties=sorted_countries.group_by('state')
+totals=unique_counties.aggregate([('change_rounded', agate.Median('change_rounded'))])
+totals=totals.order_by('change_rounded', reverse=True).print_table()
